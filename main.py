@@ -11,7 +11,7 @@ for i in range(6):
 headless = False
 
 if headless:
-    while len(env.agents) > 0:
+    while True:
         agents_count = len(env.agents)
         if agents_count > 0:
             env.step()
