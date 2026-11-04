@@ -1,12 +1,13 @@
 from evoengine import SimConfig, RngBundle, World, Env, Agent, view_simulation
 
-cfg = SimConfig(world_size=100, seed=0)
+cfg = SimConfig(world_size=75, seed=0)
 rng = RngBundle(cfg.seed)
 world = World(cfg, rng)
 env = Env(cfg, rng, world)
 
+cord=world.size//2
 for i in range(6):
-    env.add_agent(Agent(cfg, rng, x=40+i, y=60))
+    env.add_agent(Agent(cfg, rng, x=cord+i, y=cord))
 
 headless = False
 
