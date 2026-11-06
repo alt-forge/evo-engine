@@ -1,11 +1,9 @@
-from evoengine import SimConfig, RngBundle, World, Env, Agent, view_simulation, CellType
+from evoengine import SimConfig, RngBundle, World, Env, Agent, CellType
 import pandas as pd
-import numpy as np
+from itertools import product
+import os
 
-headless = True
-
-def simulate(headless, cfg):
-    MAX_STEPS = 20000
+def simulate(cfg, MAX_STEPS):
     rng = RngBundle(cfg.seed)
     world = World(cfg, rng)
     env = Env(cfg, rng, world)
@@ -16,36 +14,42 @@ def simulate(headless, cfg):
         if world.grid[x, y] == CellType.EMPTY:
             env.add_agent(Agent(cfg, rng, x=x, y=y))
 
-    if headless:
-        while True:
-            agents_count = len(env.agents)
-            if agents_count > 0 and (env.world.time < MAX_STEPS):
-                env.step()
-            else:
-                return env.world.time
-    else:
-        view_simulation(env)
+    while True:
+        agents_count = len(env.agents)
+        if agents_count > 0 and (env.world.time <= MAX_STEPS):
+            env.step()
+        else:
+            return {
+            "death_time": env.world.time,
+            "agents_in_env_for_all_time": env.id_for_agent
+        }
 
-results = []
+def experiment(settings: dict, seeds: list[int], max_steps: int = 20000,
+               out: str = "experiments") -> pd.DataFrame:
+    
+    if not os.path.isdir(out):
+        os.mkdir("experiments")
 
-vr_l = [3,5,7,10]
-h1_l = [8,16,32,64,128]
-h2_l = [8,16,32,64,128]
+    names = list(settings)
+    rows = []
+    for combo in product(*settings.values()):
+        grid = dict(zip(names, combo))
+        for seed in seeds:
+            cfg = SimConfig(**grid, seed=seed)
+            rows.append({**grid, "seed": seed, **simulate(cfg, max_steps)})
 
-for vr in vr_l:
-    for h1 in h1_l:
-        for h2 in h2_l:
-            print(f"SIMULATION: vision_range={vr}, hidden_size_1={h1}, hidden_size_2={h2}")
-            for s in range(1):
-                cfg = SimConfig(seed=s, vision_range=vr, hidden_size_1=h1, hidden_size_2=h2)
-                max_time = simulate(headless, cfg)
-                results.append({
-                    "seed": s,
-                    "vision_range": vr,
-                    "hidden_size_1": h1,
-                    "hidden_size_2": h2,
-                    "max_time": max_time
-                })
+    df = pd.DataFrame(rows)
+    df.to_csv(f'{out}/experiment_1.csv', index=False)
+    return df
 
-df = pd.DataFrame(results)
-df.to_csv("experiments.csv", index=False)
+
+# В setting нужно указывать какую настройку и на каком диапозоне мы изменяем
+setting_1 = {
+    "vision_range": [3,5],
+    "hidden_size_1": [16,32]
+}
+
+# На каких сидах мы проверяем
+seeds = list(range(5))
+
+df = experiment(setting_1,seeds)
