@@ -1,7 +1,7 @@
 from evoengine import SimConfig, RngBundle, World, Env, Agent, CellType
 import pandas as pd
 from itertools import product
-import os
+import os, time
 from multiprocessing import Pool, cpu_count
 
 def simulate(args: tuple) -> dict:
@@ -44,12 +44,13 @@ def experiment(settings: dict, seeds: list[int], max_steps: int = 20_000,
     processes = processes or max(1, cpu_count() - 1)
     print(f"Running {len(grid_runs)} sims on {processes} processes")
 
+    start_time = time.time()
     with Pool(processes=processes) as pool:
         rows = []
         for i, res in enumerate(pool.imap_unordered(simulate, grid_runs, chunksize=1), 1):
             rows.append(res)
             if i % 10 == 0 or i == len(grid_runs):
-                print(f"  {i}/{len(grid_runs)}")
+                print(f"  {i}/{len(grid_runs)} ~{(len(grid_runs) - i) * (time.time() - start_time) / i / 60:.1f} minutes")
 
     df = pd.DataFrame(rows)
     df.to_csv(f"{out}/experiment_1.csv", index=False)
