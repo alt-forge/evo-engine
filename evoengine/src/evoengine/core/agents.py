@@ -5,11 +5,6 @@ from .config import SimConfig
 from .rng import RngBundle
 
 class NeuralNetwork:
-    @staticmethod
-    def softmax(x):
-        e = np.exp(x - np.max(x))
-        return e / e.sum()
-
     def __init__(self, cfg: SimConfig, rng: RngBundle):
         self.cfg = cfg
         self.rng = rng
@@ -22,10 +17,13 @@ class NeuralNetwork:
         h2 = np.tanh(h1 @ self.W2)
         return h2 @ self.W3
 
-    def choice_action(self, vision: np.ndarray):
+    def choice_action(self, vision):
         logits = self.forward(vision)
-        probs = self.softmax(logits)
-        return self.rng.action.choice(len(probs), p=probs)
+        logits -= logits.max()
+        e = np.exp(logits)
+        cdf = np.cumsum(e / e.sum())
+        result = self.rng.action.random()
+        return int(np.searchsorted(cdf, result))
     
     def mutate(self):
         for W in [self.W1, self.W2, self.W3]:

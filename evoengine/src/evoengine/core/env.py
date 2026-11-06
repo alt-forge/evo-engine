@@ -116,13 +116,20 @@ class Env:
             if 0 <= x < self.world.size and 0 <= y < self.world.size:
                 return CellType(int(grid[x, y]))
             return CellType.WALL
-
-    def arround_cell(self, cell: tuple[int,int], dist: int) -> list[int]:
-        directions = [(1, 0), (-1, 0), (0, 1), (0, -1)]
+    
+    def arround_cell(self, cell, dist):
+        x, y = cell
+        size = self.world.size
+        grid = self.world.grid
+        agents = self.agents
         cells = []
-        for dx, dy in directions:
+        for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
             for d in range(1, dist + 1):
-                cells.append(self.cell_type((cell[0] + dx * d, cell[1] + dy * d)))
+                cx, cy = x + dx*d, y + dy*d
+                if 0 <= cx < size and 0 <= cy < size:
+                    cells.append(int(CellType.AGENT) if (cx, cy) in agents else int(grid[cx, cy]))
+                else:
+                    cells.append(int(CellType.WALL))
         return cells
 
     def find_random_free_cell_in_arround(self, cell: tuple[int,int]):
