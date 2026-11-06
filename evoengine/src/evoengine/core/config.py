@@ -27,7 +27,7 @@ class SimConfig:
 
     # Метаболизм
     damage_per_step: float = 0.25
-    damage_per_move: float = 0.15
+    damage_per_move: float = 0.05
     food_value: float = 10.0
 
     # Размножение

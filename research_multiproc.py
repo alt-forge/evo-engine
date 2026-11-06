@@ -60,12 +60,11 @@ def experiment(settings: dict, seeds: list[int], max_steps: int = 20_000,
 
 if __name__ == "__main__":
     setting_1 = {
-        "damage_per_step": [0.20, 0.15, 0.10, 0.05, 0.01],
-        "damage_per_move": [0.15, 0.10, 0.05, 0.01],
+        "damage_per_step": [0.20, 0.15, 0.05],
         "food_cluster_count": [5,6,7,8,9,10],
         "food_per_spawn": [10,15,20],
         "food_cluster_capacity": [80,100,120],
         "food_respawn_period": [10,15,20]
     }
-    seeds = list(range(25))
-    df = experiment(setting_1, seeds, max_steps=20000, processes=os.cpu_count())
+    seeds = list(range(10))
+    df = experiment(setting_1, seeds, max_steps=20000, processes=(os.cpu_count()))
