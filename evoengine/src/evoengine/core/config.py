@@ -18,6 +18,7 @@ class SimConfig:
     starting_hp: float = 100.0
     max_hp: float = 200.0
     age_limit: int = 500
+    initial_population: int = 100
 
     # Нейросеть
     vision_range: int = 5
