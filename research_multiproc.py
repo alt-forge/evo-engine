@@ -4,9 +4,7 @@ from itertools import product
 import os
 from multiprocessing import Pool, cpu_count
 
-
 def simulate(args: tuple) -> dict:
-    """Один прогон. args = (grid_dict, seed, max_steps)."""
     grid, seed, max_steps = args
     cfg = SimConfig(**grid, seed=seed)
 
@@ -28,8 +26,6 @@ def simulate(args: tuple) -> dict:
         "seed": seed,
         "death_time": env.world.time,
         "agents_in_env_for_all_time": env.id_for_agent,
-        "extinct": len(env.agents) == 0,
-        "survived": len(env.agents) > 0,
     }
 
 
@@ -63,8 +59,12 @@ def experiment(settings: dict, seeds: list[int], max_steps: int = 20_000,
 
 if __name__ == "__main__":
     setting_1 = {
-        "vision_range": [3, 5],
-        "hidden_size_1": [16, 32],
+        "damage_per_step": [0.20, 0.15, 0.10, 0.05, 0.01],
+        "damage_per_move": [0.15, 0.10, 0.05, 0.01],
+        "food_cluster_count": [5,6,7,8,9,10],
+        "food_per_spawn": [10,15,20],
+        "food_cluster_capacity": [80,100,120],
+        "food_respawn_period": [10,15,20]
     }
-    seeds = list(range(5))
-    df = experiment(setting_1, seeds, max_steps=20_000, processes=os.cpu_count())
+    seeds = list(range(25))
+    df = experiment(setting_1, seeds, max_steps=20000, processes=os.cpu_count())

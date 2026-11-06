@@ -5,7 +5,7 @@ class SimConfig:
     # Мир
     world_size: int = 100
     seed: int = 100
-    wall_count: int = 250
+    wall_count: int = 0
 
     # Еда
     food_cluster_count: int = 5
@@ -22,8 +22,8 @@ class SimConfig:
 
     # Нейросеть
     vision_range: int = 5
-    hidden_size_1: int = 21
-    hidden_size_2: int = 12
+    hidden_size_1: int = 16
+    hidden_size_2: int = 4
 
     # Метаболизм
     damage_per_step: float = 0.25
