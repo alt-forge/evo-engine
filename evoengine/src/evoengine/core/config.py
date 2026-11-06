@@ -9,9 +9,10 @@ class SimConfig:
 
     # Еда
     food_cluster_count: int = 5
-    food_per_cluster: int = 10
+    food_per_spawn: int = 10
     food_cluster_radius: int = 3
     food_respawn_period: int = 15
+    food_cluster_capacity: int = 100
 
     # Агенты
     starting_hp: float = 100.0

@@ -6,6 +6,28 @@ from .actions import Action, ACTION_DELTAS
 from .config import SimConfig
 from .cells import CellType
 
+class FoodCluster:
+    def __init__(self, cx, cy, radius, capacity):
+            self.cx = cx
+            self.cy = cy
+            self.radius = radius
+            self.capacity = capacity
+
+    def set_capacity(self,delta):
+        self.capacity += delta
+
+    def set_center(self, new_cx, new_cy):
+        self.cx = new_cx
+        self.cy = new_cy
+
+    def is_active(self):
+        return self.capacity > 0
+
+    def food_spawn(self, rng: RngBundle):
+        x = self.cx + rng.foods_spawn.integers(-self.radius, self.radius + 1)
+        y = self.cy + rng.foods_spawn.integers(-self.radius, self.radius + 1)
+        return x,y
+
 class World:
     def __init__(self, cfg: SimConfig, rng: RngBundle):
         self.cfg = cfg
@@ -32,27 +54,26 @@ class World:
 
     def _create_food_clusters(self):
         for _ in range(self.cfg.food_cluster_count):
-            cx = self.rng.env_food_spawn.integers(1, self.size-1)
-            cy = self.rng.env_food_spawn.integers(1, self.size-1)
-            self.food_clusters.append((cx, cy))
+            # Центр кластера может быть внутри стены, просто еда не будет расти в этой клете, будто бы дерево растет из под асфальта
+            cx = self.rng.food_clusters_spawn.integers(1, self.size-1)
+            cy = self.rng.food_clusters_spawn.integers(1, self.size-1)
+            self.food_clusters.append(FoodCluster(cx, cy, self.cfg.food_cluster_radius, self.cfg.food_cluster_capacity))
 
-            for _ in range(self.cfg.food_per_cluster):
-                x = cx + self.rng.env_food_spawn.integers(-self.cfg.food_cluster_radius, self.cfg.food_cluster_radius + 1)
-                y = cy + self.rng.env_food_spawn.integers(-self.cfg.food_cluster_radius, self.cfg.food_cluster_radius + 1)
-        
-                if 0 < x < self.size-1 and 0 < y < self.size-1:
-                    if self.grid[x, y] == CellType.EMPTY:
+
+    def update_food_clusters(self):
+        for food_cluster in self.food_clusters:
+            if food_cluster.is_active():
+                for _ in range(self.cfg.food_per_spawn):
+                    x,y = food_cluster.food_spawn(self.rng)
+                    if (0 < x < self.size-1) and (0 < y < self.size-1) and (self.grid[x, y] == CellType.EMPTY):
                         self.grid[x, y] = CellType.FOOD
+                        food_cluster.set_capacity(-1)
+            else:
+                cx = self.rng.food_clusters_set_spawn.integers(1, self.size-1)
+                cy = self.rng.food_clusters_set_spawn.integers(1, self.size-1)
+                food_cluster.set_center(cx,cy)
+                food_cluster.set_capacity(self.cfg.food_cluster_capacity)
 
-    def respawn_food_on_cluster(self):
-        for cx, cy in self.food_clusters:
-            for _ in range(self.cfg.food_per_cluster):
-                x = cx + self.rng.env_food_respawn.integers(-self.cfg.food_cluster_radius, self.cfg.food_cluster_radius + 1)
-                y = cy + self.rng.env_food_respawn.integers(-self.cfg.food_cluster_radius, self.cfg.food_cluster_radius + 1)
-
-                if 0 < x < self.size-1 and 0 < y < self.size-1:
-                    if self.grid[x, y] == CellType.EMPTY:
-                        self.grid[x, y] = CellType.FOOD
 
 class Env:
     def __init__(self, cfg: SimConfig, rng: RngBundle, world: World):
@@ -176,10 +197,8 @@ class Env:
                 case CellType.AGENT: self._act_if_agent(agents_list)
 
     def step(self):
-        self.world.time += 1
-
         if self.world.time % self.cfg.food_respawn_period == 0:
-            self.world.respawn_food_on_cluster()
+                    self.world.update_food_clusters()
 
         intentions = {
             agent: agent.decide(self.arround_cell((agent.x,agent.y),self.cfg.vision_range))
@@ -212,3 +231,5 @@ class Env:
         # новорождённые
         for child in newborns:
             self.add_agent(child)
+
+        self.world.time += 1

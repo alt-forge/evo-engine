@@ -4,7 +4,7 @@ from ..core import Env
 from .rendering import PygameRenderer
 from .gui import Gui, PANEL_WIDTH
 
-def view_simulation(env: Env, zoom: int = 6, speed: int = 1):
+def view_simulation(env: Env, zoom: int = 8, speed: int = 1):
     renderer = PygameRenderer(env, zoom=zoom, panel_width=PANEL_WIDTH)
     gui = Gui(env, zoom=zoom, speed=speed)
 
