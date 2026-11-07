@@ -14,7 +14,7 @@ def simulate(headless, cfg):
     if headless:
         while True:
             agents_count = len(env.agents)
-            if agents_count > 0:
+            if agents_count > 0 and (env.world.time < 10000):
                 print(agents_count, env.world.time)
                 env.step()
             else:
@@ -23,5 +23,5 @@ def simulate(headless, cfg):
         view_simulation(env)
 
 headless = True
-cfg = SimConfig(seed=0)
+cfg = SimConfig(seed=82)
 simulate(headless, cfg)

@@ -1,4 +1,5 @@
 import numpy as np
+import math
 
 from .actions import Action
 from .config import SimConfig
@@ -19,12 +20,17 @@ class NeuralNetwork:
 
     def choice_action(self, vision):
         logits = self.forward(vision)
-        logits -= logits.max()
-        e = np.exp(logits)
-        cdf = np.cumsum(e / e.sum())
+        max = logits.max()
+        e = [math.exp(logit - max) for logit in logits]
+        s = sum(e)
         result = self.rng.action.random()
-        return int(np.searchsorted(cdf, result))
-    
+        acc = 0.0
+        for i in range(len(e)):
+            acc += e[i] / s
+            if result < acc:
+                return i
+        return len(e) - 1
+        
     def mutate(self):
         for W in [self.W1, self.W2, self.W3]:
             mutation_rate = 1 / W.size
@@ -45,6 +51,9 @@ class Agent:
     def decide(self, observation: list[int]):
         vision = np.array(observation + [self.hp / self.cfg.max_hp, self.age / self.cfg.age_limit]) # Набор чувств агента (observation из env и самоощущение)
         return Action(self.nn.choice_action(vision))
+
+    def decide_array(self, vision_array):
+        return Action(self.nn.choice_action(vision_array))
 
     def move_to(self, coordinates: tuple[int,int]):
         self.x, self.y = coordinates[0], coordinates[1]

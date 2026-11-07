@@ -81,6 +81,7 @@ class Env:
         self.rng = rng
         self.world = world
         self.agents = {}
+        self.agent_grid = np.zeros((world.size, world.size), dtype=np.int8) # Сетка присутсвия агента на клетке, для быстрой проверки
         self.id_for_agent = 0 # ID следующего агента в среде
 
     def set_agent_id(self, agent: Agent):
@@ -91,19 +92,25 @@ class Env:
         old_coords = (agent.x, agent.y)
         if old_coords in self.agents:
             del self.agents[old_coords]
+            self.agent_grid[old_coords] = 0
+
             agent.move_to(target)
+
             self.agents[target] = agent
+            self.agent_grid[target] = 1
 
     def add_agent(self, agent: Agent):
         cell = (agent.x, agent.y)
         if not(cell in self.agents):
             self.set_agent_id(agent)
-            self.agents[(agent.x, agent.y)] = agent
+            self.agents[cell] = agent
+            self.agent_grid[cell] = 1
     
     def del_agent(self, agent: Agent):
         cell = (agent.x, agent.y)
         if cell in self.agents:
-            del self.agents[(agent.x, agent.y)]
+            del self.agents[cell]
+            self.agent_grid[cell] = 0
 
     def cell_type(self, cell: tuple[int,int], agents_map = None, grid = None) -> CellType:
             x, y = cell
@@ -117,20 +124,29 @@ class Env:
                 return CellType(int(grid[x, y]))
             return CellType.WALL
     
-    def arround_cell(self, cell, dist):
-        x, y = cell
-        size = self.world.size
-        grid = self.world.grid
-        agents = self.agents
-        cells = []
-        for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+    def _get_vision_batch(self, coords, dist):
+        N = len(coords)
+        obs = np.zeros((N, dist * 4), dtype=np.float32)
+        
+        S = self.world.size
+        
+        for i, (dx, dy) in enumerate(((1, 0), (-1, 0), (0, 1), (0, -1))):
             for d in range(1, dist + 1):
-                cx, cy = x + dx*d, y + dy*d
-                if 0 <= cx < size and 0 <= cy < size:
-                    cells.append(int(CellType.AGENT) if (cx, cy) in agents else int(grid[cx, cy]))
-                else:
-                    cells.append(int(CellType.WALL))
-        return cells
+                cx = coords[:, 0] + dx * d
+                cy = coords[:, 1] + dy * d
+
+                valid = (cx >= 0) & (cx < S) & (cy >= 0) & (cy < S)
+                vals = np.full(N, 2, dtype=np.float32)
+                v_cx = cx[valid]
+                v_cy = cy[valid]
+
+                if len(v_cx) > 0:
+                    is_agent = self.agent_grid[v_cx, v_cy]
+                    world_vals = self.world.grid[v_cx, v_cy]
+                    vals[valid] = np.where(is_agent, 3, world_vals)
+                obs[:, (i * dist) + (d - 1)] = vals
+                
+        return obs
 
     def find_random_free_cell_in_arround(self, cell: tuple[int,int]):
         x,y = cell
@@ -205,12 +221,24 @@ class Env:
 
     def step(self):
         if self.world.time % self.cfg.food_respawn_period == 0:
-                    self.world.update_food_clusters()
+            self.world.update_food_clusters()
 
-        intentions = {
-            agent: agent.decide(self.arround_cell((agent.x,agent.y),self.cfg.vision_range))
-            for agent in self.agents.values()
-        }
+        agents_list = list(self.agents.values())
+        if not agents_list:
+            return
+
+        coords = np.array([(a.x, a.y) for a in agents_list], dtype=np.int32)
+        obs_matrix = self._get_vision_batch(coords, self.cfg.vision_range)
+
+        N = len(agents_list)
+        visions = np.zeros((N, self.cfg.input_size), dtype=np.float32)
+        visions[:, :-2] = obs_matrix
+        visions[:, -2] = [a.hp / self.cfg.max_hp for a in agents_list]
+        visions[:, -1] = [a.age / self.cfg.age_limit for a in agents_list]
+
+        intentions = {}
+        for i, agent in enumerate(agents_list):
+            intentions[agent] = agent.decide_array(visions[i])
 
         self._act(intentions)
 
@@ -233,7 +261,7 @@ class Env:
         dead = [pos for pos, agent in self.agents.items()
                 if agent.hp <= 0 or agent.age >= self.cfg.age_limit]
         for pos in dead:
-            del self.agents[pos]
+            self.del_agent(self.agents[pos])
 
         # новорождённые
         for child in newborns:
