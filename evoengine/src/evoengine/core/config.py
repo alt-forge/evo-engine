@@ -8,16 +8,16 @@ class SimConfig:
     wall_count: int = 0
 
     # Еда
-    food_cluster_count: int = 5
-    food_per_spawn: int = 10
-    food_cluster_radius: int = 3
+    food_cluster_count: int = 8
+    food_per_spawn: int = 15
+    food_cluster_radius: int = 4
     food_respawn_period: int = 15
     food_cluster_capacity: int = 100
 
     # Агенты
     starting_hp: float = 100.0
     max_hp: float = 200.0
-    age_limit: int = 500
+    age_limit: int = 1000
     initial_population: int = 100
 
     # Нейросеть
@@ -26,8 +26,8 @@ class SimConfig:
     hidden_size_2: int = 4
 
     # Метаболизм
-    damage_per_step: float = 0.25
-    damage_per_move: float = 0.05
+    damage_per_step: float = 0.15
+    damage_per_move: float = 0.10
     food_value: float = 10.0
 
     # Размножение

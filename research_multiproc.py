@@ -2,6 +2,7 @@ from evoengine import SimConfig, RngBundle, World, Env, Agent, CellType
 import pandas as pd
 from itertools import product
 import os, time
+import numpy as np
 from multiprocessing import Pool, cpu_count
 
 def simulate(args: tuple) -> dict:
@@ -21,13 +22,37 @@ def simulate(args: tuple) -> dict:
     while env.agents and env.world.time < max_steps:
         env.step()
 
+    if env.agents:
+        agents_list = list(env.agents.values())
+        
+        w1_norms = [np.linalg.norm(a.nn.W1) for a in agents_list]
+        w2_norms = [np.linalg.norm(a.nn.W2) for a in agents_list]
+        w3_norms = [np.linalg.norm(a.nn.W3) for a in agents_list]
+
+        mean_w1 = float(np.mean(w1_norms))
+        mean_w2 = float(np.mean(w2_norms))
+        mean_w3 = float(np.mean(w3_norms))
+        
+        std_w1 = float(np.std(w1_norms))
+        std_w2 = float(np.std(w2_norms))
+        std_w3 = float(np.std(w3_norms))
+
+    else:
+        mean_w1 = mean_w2 = mean_w3 = 0.0
+        std_w1 = std_w2 = std_w3 = 0.0
+
     return {
         **grid,
         "seed": seed,
         "death_time": env.world.time,
         "agents_in_env_for_all_time": env.id_for_agent,
+        "mean_W1": mean_w1,
+        "mean_W2": mean_w2,
+        "mean_W3": mean_w3,
+        "std_W1": std_w1,
+        "std_W2": std_w2,
+        "std_W3": std_w3
     }
-
 
 def experiment(settings: dict, seeds: list[int], max_steps: int = 20_000,
                out: str = "experiments",
@@ -53,18 +78,11 @@ def experiment(settings: dict, seeds: list[int], max_steps: int = 20_000,
                 print(f"  {i}/{len(grid_runs)} ~{(len(grid_runs) - i) * (time.time() - start_time) / i / 60:.1f} minutes")
 
     df = pd.DataFrame(rows)
-    df.to_csv(f"{out}/experiment_1.csv", index=False)
-    print(f"Saved: {out}/experiment_1.csv")
+    df.to_csv(f"{out}/experiment_3.csv", index=False)
+    print(f"Saved: {out}/experiment_3.csv")
     return df
 
-
 if __name__ == "__main__":
-    setting_1 = {
-        "damage_per_step": [0.20, 0.15, 0.05],
-        "food_cluster_count": [5,6,7,8,9,10],
-        "food_per_spawn": [10,15,20],
-        "food_cluster_capacity": [80,100,120],
-        "food_respawn_period": [10,15,20]
-    }
-    seeds = list(range(10))
-    df = experiment(setting_1, seeds, max_steps=20000, processes=(os.cpu_count()))
+    setting_1 = {}
+    seeds = [32,36,44,82]
+    df = experiment(setting_1, seeds, max_steps=50000, processes=(os.cpu_count()))
